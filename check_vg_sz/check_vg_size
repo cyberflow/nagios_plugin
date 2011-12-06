@@ -99,14 +99,14 @@ fi
 
 if [ "$freespace" -le "$critlevel" ]
 then
-	MESSAGE="VG $volumegroup CRITICAL available Space is $freespace KB | freespace=${freespace};${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup CRITICAL available Space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_CRITICAL
 elif [ "$freespace" -le "$warnlevel" ]
 then
-	MESSAGE="VG $volumegroup WARNING available Space is $freespace KB | freespace=${freespace};${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup WARNING available Space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_WARNING
 else
-	MESSAGE="VG $volumegroup OK available space is $freespace KB | freespace=${freespace};${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup OK available space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_OK
 fi 
 

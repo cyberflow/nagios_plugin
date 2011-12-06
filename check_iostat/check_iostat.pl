@@ -76,12 +76,15 @@ if  ( !$disk_descr ) {
 	print_usage();
 }
 
+my $disk_pr = $disk_descr;
+$disk_pr =~ s/!/\//;
+
 open F, "</proc/diskstats" or die "Can't open /proc/diskstats: $!";
 my @f = <F>;
 close F;
 
 foreach (@f) {
-        if ($_ =~ /${disk_descr}/){
+        if ($_ =~ /${disk_pr}/){
                 $line=$_;
                 last;
                 #Interface found, exiting loop
