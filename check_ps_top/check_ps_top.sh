@@ -15,9 +15,9 @@
 #   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 PROGNAME=`basename $0`
-VERSION="Version 1.0,"
+VERSION="Version 1.1,"
 AUTHOR="2009, Mike Adolphs (http://www.matejunkie.com/)"
-export COLUMNS=""
+export COLUMNS="512"
 export LINES=""
 
 ST_OK=0
