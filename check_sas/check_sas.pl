@@ -153,6 +153,6 @@ for my $sas_disk ( keys %perf_data ) {
     $total_write += ( (@{ $perf_data{$sas_disk} }[1] - @{ $last_perf_data{$sas_disk} }[1])/ ( time - $last_check_time ) );
 }
 
-my $output = "Averege total : ".sprintf("%.2lf",$total_read)." read, ".sprintf("%.2lf",$total_write)." write | total_read=".sprintf("%.2lf",$total_read).";;;; total_write=".sprintf("%.2lf",$total_write).";;;; ".$output_pd."\n";
+my $output = "Averege total : ".sprintf("%.2lf",$total_read)." read, ".sprintf("%.2lf",$total_write)." write | total_read=".sprintf("%.2lf",$total_read).";;;; total_write=".sprintf("%.2lf",$total_write).";;;;".$output_pd."\n";
 
 print $output;
