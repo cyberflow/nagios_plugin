@@ -1,0 +1,2 @@
+This is a simple Nagios Plugin which tests how many space in an LVM Volume Group is free. It`s written in bash
+

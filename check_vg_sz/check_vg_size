@@ -3,7 +3,7 @@
 # Written by M. Koettenstorfer (mko@lihas.de)
 # Some additions by J. Schoepfer (jsc@lihas.de)
 # Some additions by D. Ryobryshkin (dmitry.r@cyberflow.net)
-# Last Modified: 20011-12-05
+# Last Modified: 2012-01-24
 #
 # Description:
 #
@@ -53,11 +53,11 @@ while test -n "$1"; do
 			exit $STATE_OK
 			;;
 		-w)
-			warnlevel=$[$2*1048576]
+			warnlevel=$[$2*1024]
 			shift
 			;;
 		-c)	
-			critlevel=$[$2*1048576]
+			critlevel=$[$2*1024]
 			shift
 			;;
 		-v)
@@ -76,9 +76,7 @@ then
 	exit 1
 fi
 
-#freespace=$(/sbin/vgdisplay $volumegroup| grep Free|sed s/\,/\ /g| sed s/\\\./\ /g|awk '{print $7 }')
-#freespace=$(/sbin/vgdisplay "$volumegroup" | head -n19 | grep Free | cut -d'/' -f3 | cut -d' ' -f2 2>/dev/null)
-freespace=$(sudo /sbin/vgdisplay --colon "$volumegroup" | awk -F: ' { mb = $13 * $16; print mb } ' )
+freespace=$(sudo /sbin/vgdisplay --colon "$volumegroup" | awk -F: ' { mb = $13 * $16 / 1024; print mb } ' )
 
 # Check arguments for validity
 if [[ -c $critlevel || -w $warnlevel ]] # Did we get warn and crit values?
@@ -99,14 +97,14 @@ fi
 
 if [ "$freespace" -le "$critlevel" ]
 then
-	MESSAGE="VG $volumegroup CRITICAL available Space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup CRITICAL available Space is $freespace MB | freespace=${freespace}MB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_CRITICAL
 elif [ "$freespace" -le "$warnlevel" ]
 then
-	MESSAGE="VG $volumegroup WARNING available Space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup WARNING available Space is $freespace MB | freespace=${freespace}MB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_WARNING
 else
-	MESSAGE="VG $volumegroup OK available space is $freespace KB | freespace=${freespace}KB;${warnlevel};${critlevel}"
+	MESSAGE="VG $volumegroup OK available space is $freespace MB | freespace=${freespace}MB;${warnlevel};${critlevel}"
 	exitstatus=$STATE_OK
 fi 
 
