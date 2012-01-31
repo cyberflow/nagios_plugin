@@ -34,10 +34,11 @@ print_help() {
 	exit 0
 }
 
-if [ $# -lt 4 ]; then
-	print_usage
-	exit $STATE_UNKNOWN
-fi
+#if [ $# -lt 4 ]; then
+	#print_usage
+	#exit $STATE_UNKNOWN        
+#        echo "Not all options"
+#fi
 
 exitstatus=$STATE_UNKNOWN #default
 
@@ -75,6 +76,20 @@ then
 	echo "with \"-v Volumegroup\", bye."
 	exit 1
 fi
+
+if [ -z "$warnlevel" ]
+then
+    warnlevel=111;
+fi
+
+if [ -z "$critlevel" ]
+then
+    critlevel=222;
+fi
+
+echo "VG=$volumegroup; W=$warnlevel; C=$critlevel"
+
+exit 0;
 
 freespace=$(sudo /sbin/vgdisplay --colon "$volumegroup" | awk -F: ' { mb = $13 * $16 / 1024; print mb } ' )
 
