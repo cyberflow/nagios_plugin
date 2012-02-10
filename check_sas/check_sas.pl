@@ -36,14 +36,15 @@ my %STATUS_CODE = ( 'UNKNOWN' => '3', 'OK' => '0', 'WARNING' => '1', 'CRITICAL' 
 my ( $ior, $iow ) = 0;
 my $warn_usage = 85;
 my $crit_usage = 98;
-my $o_noreg    = undef;
+my $o_noget    = undef;
+my @sas_disks;
 
 my $status = GetOptions(
     "h|help"       => \$opt_h,
     "w|warning=s"  => \$warn_usage,
     "c|critical=s" => \$crit_usage,
     "d|disk=s"     => \$sas_descr,
-    'r'            => \$o_noreg,
+    'n'            => \$o_noget,
     "u|units=s"    => \$units,
     "M|max=i"      => \$max_value
     );
@@ -55,7 +56,9 @@ sub print_usage {
     Options:
 
     -d --disk STRING
-        disk Name
+        disk Name or Names delimiter by comma
+    -n 
+        not use multipath for geting disk. -d need contain disks names.
 
 EOU
 
@@ -73,11 +76,15 @@ if  ( !$sas_descr ) {
 
 # get sas disk
 
-my @sas_disks = `sudo /sbin/multipath -l | grep $sas_descr | cut -d" " -f2`;
-if ( ! @sas_disks ){
+if ( !$o_noget ){
+    @sas_disks = `sudo /sbin/multipath -l | grep $sas_descr | cut -d" " -f2`;
+    if ( ! @sas_disks ){
         exit $STATUS_CODE{"UNKNOWN"};
+    }
+    chomp(@sas_disks);
+} else {
+    @sas_disks=split(/,/,$sas_descr);
 }
-chomp(@sas_disks);
 
 open F, "</proc/diskstats" or die "Can't open /proc/diskstats: $!";
 my @f = <F>;
@@ -110,7 +117,7 @@ my %last_perf_data = %perf_data;
 
 if (
     open( FILE,
-          "<" . $IO_FILE . $sas_descr
+          "<" . $IO_FILE . "disks"
     )
 )
 {
@@ -118,7 +125,7 @@ if (
         ( $sas_disk, $last_check_time, $last_read_bytes, $last_write_bytes ) = split( ":", $row );
         if ( (! $last_read_bytes) || (! $last_write_bytes) || ($last_read_bytes !~ m/\d/) || ($last_write_bytes !~ m/\d/) ) {
                 %last_perf_data = %perf_data;
-                exit;
+                next;
         }
         $last_perf_data{$sas_disk} = [ $last_read_bytes, $last_write_bytes ];
     }
@@ -128,7 +135,7 @@ if (
 
 # save current statistics
 
-open( FILE, ">" . $IO_FILE . $sas_descr )
+open( FILE, ">" . $IO_FILE . "disks" )
   or die "Can't open $IO_FILE for writing: $!";
 
 my $update_time = time;
