@@ -70,7 +70,16 @@ done
 
 JUMPS=$(traceroute -n -q1 -w1 -t8 $host_name | tail -n+2 | wc -l);
 
-[ -z ${def_jumps} ] && def_jumps=${JUMPS};
+#[ -z ${def_jumps} ] && def_jumps=${JUMPS};
+[ -z ${def_jumps} ] && {
+    [ -f /tmp/${host_name}.* ] && {
+	def_jumps=$(ls /tmp/${host_name}* | awk -F\. '{print $5}');
+    } || {
+	def_jumps=${JUMPS};
+	touch /tmp/${host_name}.${def_jumps};
+    }
+}
+
 
 case "${JUMPS}" in
     30)
@@ -81,4 +90,4 @@ case "${JUMPS}" in
         [ ${JUMPS} -gt ${def_jumps} ] && echo "WARNING: Jumps is greater than default." && exit $STATE_WARNING;
 esac
 
-echo "OK: Route to host is OK" && exit $STATE_OK;
+echo "OK: Route to host is OK - ${JUMPS} jumps" && exit $STATE_OK;
