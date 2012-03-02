@@ -16,6 +16,7 @@ use Nagios::Plugin::Getopt;
 use Nagios::Plugin::Threshold;
 use Nagios::Plugin;
 use Data::Validate::Domain;
+use List::Util qw(max min);
 
 use vars qw(
   $plugin
@@ -31,12 +32,11 @@ sub run {
 
     my $usage = <<'EOT';
 check_dns_zone_serial -z/--zone=zonename
-                      [-h/--help] [--version] [--usage]
+                      [-h/--help] [--version] [--usage] [--debug]
 EOT
 
     $options = Nagios::Plugin::Getopt->new(
 	usage   => $usage,
-#	extra   => $extra,
 	version => $VERSION,
 	blurb   => 'Monitoring DNS Zone Serial number'
     );
@@ -45,6 +45,12 @@ EOT
 	spec     => 'zone|z=s@',
 	help     => 'zone name (e.g. example.com)',
 	required => 1,
+    );
+
+    $options->arg(
+	spec     => 'debug',
+	help     => 'debugging output',
+        required => 0,
     );
 
     $options->getopts();
@@ -63,20 +69,34 @@ EOT
     my $res   = Net::DNS::Resolver->new;
     my $query = $res->query( @{ $options->zone() }, "NS");
     my @ns;
+    my %ns_serials;
     my @serials;
+    my $check_s;
 
     if ($query) {
-	#print (grep { $_->type eq 'NS' } $query->answer)->nsdname;
        foreach my $rr (grep { $_->type eq 'NS' } $query->answer) {
            push (@ns, $rr->nsdname);
-	   push (@serials, qrsoa($rr->nsdname,@{ $options->zone() }))
+	   push (@serials, qrsoa($rr->nsdname,@{ $options->zone() }));
+	   if ( $options->debug() ) {
+	       push @{ $ns_serials{$rr->nsdname} }, qrsoa($rr->nsdname, @{ $options->zone() });
+	   }
        }
     }
     else {
        $plugin->nagios_exit( CRITICAL, "query failed: ".$res->errorstring."\n");
     }
 
-#    print "@serials";
+    if ( $options->debug() ) {
+	foreach my $key (sort keys %ns_serials) {
+	    print "$key: $ns_serials{$key}[0]\n";
+	}
+    }
+
+    if ( ( max @serials ) == ( min @serials ) ){
+	$plugin->nagios_exit( OK, "Serial number is match");
+    } else {
+	$plugin->nagios_exit( CRITICAL, "Serial number is match");
+    }
 
 }
 
@@ -86,8 +106,8 @@ sub qrsoa {
     my $res   = Net::DNS::Resolver->new(nameservers => [$host]);
     my $query = $res->query( $zone, "SOA");
     if ($query) {
-	return $query ? ($query->answer)[0]->serial : -1;
+	return $query ? ($query->answer)[0]->serial : $plugin->nagios_exit( CRITICAL, "Can't get serial from $host" );
     } else {
-	$plugin->nagios_exit( CRITICAL, "Unknown error" );
+	$plugin->nagios_exit( CRITICAL, "Can't resolve from $host" );
     }
 }
