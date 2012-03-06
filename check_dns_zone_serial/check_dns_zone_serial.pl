@@ -23,9 +23,11 @@ use vars qw(
   $options
 );
 
-if ( !caller ) {
+# the script is declared as a package so that it can be unit tested
+# but it should not be used as a module
+#if ( !caller ) {
     run();
-}
+#}
 
 sub run {
     $plugin = Nagios::Plugin->new( shortname => 'CHECK_DNS_ZONE_SERIAL' );
@@ -95,7 +97,7 @@ EOT
     if ( ( max @serials ) == ( min @serials ) ){
 	$plugin->nagios_exit( OK, "Serial number is match");
     } else {
-	$plugin->nagios_exit( CRITICAL, "Serial number is match");
+	$plugin->nagios_exit( WARNING, "Serial number isn't match");
     }
 
 }
