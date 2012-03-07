@@ -108,8 +108,8 @@ sub qrsoa {
     my $res   = Net::DNS::Resolver->new(nameservers => [$host]);
     my $query = $res->query( $zone, "SOA");
     if ($query) {
-	return $query ? ($query->answer)[0]->serial : $plugin->nagios_exit( CRITICAL, "Can't get serial from $host" );
+	return $query ? ($query->answer)[0]->serial : $plugin->nagios_exit( CRITICAL, "Can't get serial in query from $host" );
     } else {
-	$plugin->nagios_exit( CRITICAL, "Can't resolve from $host. err:".$res->errorstring."/n" );
+	$plugin->nagios_exit( CRITICAL, "Can't get query from $host. err:".$res->errorstring." answersize".$res->answersize."/n" );
     }
 }
