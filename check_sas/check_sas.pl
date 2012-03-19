@@ -79,7 +79,7 @@ if  ( !$sas_descr ) {
 if ( !$o_noget ){
     @sas_disks = `sudo /sbin/multipath -l | grep $sas_descr | cut -d" " -f2`;
     if ( ! @sas_disks ){
-        exit $STATUS_CODE{"UNKNOWN"};
+        exit $STATUS_CODE{"CRITICAL"};
     }
     chomp(@sas_disks);
 } else {

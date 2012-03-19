@@ -1,1 +1,4 @@
 Monitoring I/O per time. Use /tmp dir for save last check.
+
+Requirement:
+	sudo for /sbin/multipath
