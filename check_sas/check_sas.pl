@@ -117,7 +117,7 @@ my %last_perf_data = %perf_data;
 
 if (
     open( FILE,
-          "<" . $IO_FILE . "disks"
+          "<" . $IO_FILE . $sas_descr
     )
 )
 {
@@ -135,7 +135,7 @@ if (
 
 # save current statistics
 
-open( FILE, ">" . $IO_FILE . "disks" )
+open( FILE, ">" . $IO_FILE . $sas_descr )
   or die "Can't open $IO_FILE for writing: $!";
 
 my $update_time = time;
