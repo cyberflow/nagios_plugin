@@ -110,6 +110,6 @@ sub qrsoa {
     if ($query) {
 	return $query ? ($query->answer)[0]->serial : $plugin->nagios_exit( CRITICAL, "Can't get serial in query from $host" );
     } else {
-	$plugin->nagios_exit( CRITICAL, "Can't get query from $host. err:".$res->errorstring." answersize".$res->answersize."/n" );
+	$plugin->nagios_exit( CRITICAL, "Can't get query from $host. err:".$res->errorstring."/n" );
     }
 }
