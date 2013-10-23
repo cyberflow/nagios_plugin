@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# check_device_mounted
+# check_diskusage
 # 
 # This module is free software; you can redistribute it and/or modify it
 # under the terms of GNU general public license (gpl) version 3.
@@ -64,7 +64,7 @@ EOT
      $options = Nagios::Plugin::Getopt->new(
         usage   => $usage,
         version => $VERSION,
-        blurb   => 'Check swift unmounted device'
+        blurb   => 'Check disks usage on swift server'
      );
        
      $options->arg(
@@ -107,7 +107,6 @@ EOT
      my $get_device = get $url
      	 or $plugin->nagios_die( "Could not get device" );
 
-     #my $get_device = '[{"device": "sata36", "avail": 80, "mounted": true, "used": 22, "size": 100}, {"device": "sata35", "avail": 25, "mounted": true, "used": 55, "size": 100}, {"device": "sata34", "avail": 7, "mounted": true, "used": 33, "size": 100}]';
      my $json_data = JSON::XS::decode_json($get_device);
 
      foreach my $dev (@$json_data) {
