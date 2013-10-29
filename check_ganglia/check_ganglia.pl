@@ -13,11 +13,11 @@
 #use strict;
 use IO::Socket;
 use Switch;
-use Cache::File;
+#use Cache::File;
 # ^^^^ TODO
 use XML::Parser;
 use DateTime::Format::Epoch::Unix;
-use Data::Dumper;
+#use Data::Dumper;
 #^^^ Debug only
 
 our $VERSION = '0.1';
@@ -32,7 +32,6 @@ use Nagios::Plugin;
 use vars qw(
   $np
   $options
-  $prefix
 );
 
 if ( !caller ) {
@@ -70,6 +69,7 @@ sub run {
 
      my $usage = <<'EOT';
 check_ganglia.pl [-H|--host <host>] [-P|--port <port>] [-T|--target <target_host>] [-m|--metric] [-C|--cache <path/to/cache_file>] [-t|--timeout] 
+    [-c|--critical] [-w|--warning]
     [-h|--help] [-V|--version] [--usage] [--debug] [--verbose]
 EOT
              
@@ -110,6 +110,20 @@ EOT
         default  => '10',
         required => 0,
      );
+     
+     $options->arg(
+	 spec    => 'warning|w=s',
+	 help    => '-w, --warning INTEGER:INTEGER .  See '
+	 . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
+	 . 'for the threshold format. ',	 
+     );
+
+     $options->arg(
+	 spec    => 'critical|c=s',
+	 help    => '-c, --critical INTEGER:INTEGER .  See '
+	 . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
+	 . 'for the threshold format. ',
+     );
 
      $options->arg(
         spec     => 'debug',
@@ -120,7 +134,6 @@ EOT
      $options->getopts();
 
      my $parser = new XML::Parser( Style => "Subs" );
-
 
      my $socket = IO::Socket::INET->new(Timeout=>$options->timeout, Proto=>"tcp", PeerAddr=>$options->host, PeerPort=>$options->port)
 	 or $np->nagios_die("Can't open socket to host=" . $options->host . " and port=" . $options->port . ": $! \n ");
@@ -310,6 +323,13 @@ sub hostcheck_output {
              } else {
 		 if ($options->metric eq 'host_state') {
 		     $np->nagios_exit( $code, "host_downtime = " . $host_metrics{host_downtime} . " \n" );
+		 } else {
+		     $code = $np->check_threshold(
+			 check => $host_metrics{$options->metric},
+			 warning => $options->warning,
+			 critical => $options->critical,
+		     );
+		     $np->nagios_exit( $code, "Metric " . $options->metric . " = " . $host_metrics{$options->metric} . "\n");
 		 }
              }
           } # /unless ($metric)
