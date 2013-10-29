@@ -117,8 +117,8 @@ EOT
 
      $options->arg(
         spec     => 'cache-ttl=s',
-        help     => 'Cache time to live in sec (default: 60)',
-        default  => '60',
+        help     => 'Cache time to live (default: 60 sec)',
+        default  => '60 sec',
         required => 0,
      );
 
@@ -148,18 +148,21 @@ EOT
      my $parser = new XML::Parser( Style => "Subs" );
 
      my $cache = Cache::File->new( cache_root => $options->cache,
-                                default_expires => $options->cache-ttl.' sec' );
+                                default_expires => $options->cache-ttl);
 
      my $data = $cache->get('ganglia');
 
+     print $data;     
+
      unless ($data) {
+	 print "Cache expire!!! \n";
 	 $socket = IO::Socket::INET->new(Timeout=>$options->timeout, Proto=>"tcp", PeerAddr=>$options->host, PeerPort=>$options->port)
 	     or $np->nagios_die("Can't get data from host=" . $options->host . " and port=" . $options->port . ": $! \n ");
 	 $data = '';
 	 while ($line = <$socket>) {
 	     $data = $data . $line;
 	 }	 
-	 $cache->set('ganglia', $data, $options->cache-ttl.' sec');
+	 $cache->set('ganglia', $data, $options->cache-ttl);
          $socket->close();
      }
 
