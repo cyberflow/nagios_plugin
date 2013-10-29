@@ -7,14 +7,14 @@
 # + for host info and get down and dirty with host metrics. Useful both as a 
 # + host check and service check in nagios if targeting a host (less XML pull that way).
 # LICENSE: GPL, Copyright 2006 Eli Stair <estair {at} ilm {dot} com>
-#
+# CHANGE LOG:
+# + add Nagios::Plugin module
+# + add caching answer to file
 ##########
 
-#use strict;
 use IO::Socket;
 use Switch;
-#use Cache::File;
-# ^^^^ TODO
+use Cache::File;
 use XML::Parser;
 use DateTime::Format::Epoch::Unix;
 #use Data::Dumper;
@@ -23,10 +23,7 @@ use DateTime::Format::Epoch::Unix;
 our $VERSION = '0.1';
 
 use Nagios::Plugin::Getopt;
-#use Nagios::Plugin::Threshold;
-# ^^^^ Need this?
-#use Nagios::Plugin::Config;
-# ^^^^ DELETE ME
+use Nagios::Plugin::Threshold;
 use Nagios::Plugin;
 
 use vars qw(
@@ -68,8 +65,8 @@ sub run {
      $np = Nagios::Plugin->new( shortname => 'CHECK_GANGLIA' );
 
      my $usage = <<'EOT';
-check_ganglia.pl [-H|--host <host>] [-P|--port <port>] [-T|--target <target_host>] [-m|--metric] [-C|--cache <path/to/cache_file>] [-t|--timeout] 
-    [-c|--critical] [-w|--warning]
+check_ganglia.pl [-H|--host <host>] [-P|--port <port>] [-T|--target <target_host>] [-m|--metric] [--cache <path/to/cache/>] [-t|--timeout] 
+    [--cache-ttl <int>] [-c|--critical] [-w|--warning]
     [-h|--help] [-V|--version] [--usage] [--debug] [--verbose]
 EOT
              
@@ -112,6 +109,21 @@ EOT
      );
      
      $options->arg(
+        spec     => 'cache=s',
+        help     => 'Cache dir (default: /tmp/check_ganglia)',
+        default  => '/tmp/check_ganglia',
+        required => 0,
+     );
+
+     $options->arg(
+        spec     => 'cache-ttl=s',
+        help     => 'Cache time to live in sec (default: 60)',
+        default  => '60',
+        required => 0,
+     );
+
+
+     $options->arg(
 	 spec    => 'warning|w=s',
 	 help    => '-w, --warning INTEGER:INTEGER .  See '
 	 . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
@@ -135,10 +147,23 @@ EOT
 
      my $parser = new XML::Parser( Style => "Subs" );
 
-     my $socket = IO::Socket::INET->new(Timeout=>$options->timeout, Proto=>"tcp", PeerAddr=>$options->host, PeerPort=>$options->port)
-	 or $np->nagios_die("Can't open socket to host=" . $options->host . " and port=" . $options->port . ": $! \n ");
+     my $cache = Cache::File->new( cache_root => $options->cache,
+                                default_expires => $options->cache-ttl.' sec' );
 
-     eval { $parser->parse($socket); };
+     my $data = $cache->get('ganglia');
+
+     unless ($data) {
+	 $socket = IO::Socket::INET->new(Timeout=>$options->timeout, Proto=>"tcp", PeerAddr=>$options->host, PeerPort=>$options->port)
+	     or $np->nagios_die("Can't get data from host=" . $options->host . " and port=" . $options->port . ": $! \n ");
+	 $data = '';
+	 while ($line = <$socket>) {
+	     $data = $data . $line;
+	 }	 
+	 $cache->set('ganglia', $data, $options->cache-ttl.' sec');
+         $socket->close();
+     }
+
+     eval { $parser->parse($data); };
      if (  $@ !=~ m{^ok} ) { 
 	 $np->nagios_die("Can't parse XML stream: $@");
      }
