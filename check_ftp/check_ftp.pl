@@ -111,10 +111,17 @@ EOT
      $options->getopts();
 
      if ($options->config) {
-	 my $Config = Nagios::Plugin::Config->read( $options->config );
+	 my $Config = Nagios::Plugin::Config->read( $options->config )
+	     or $plugin->nagios_die("Cannot read config file " . $options->config);
 	 $user = $Config->{ftp}->{user}[0];
 	 $passwd = $Config->{ftp}->{password}[0];
 	 verbose "FTP user: $user;\nFTP passwd: $passwd;\n";
+     } elsif (($options->user) && ($options->passwd)) {
+	 $user = $options->user;
+	 $passwd = $options->passwd;
+	 verbose "FTP user: $user;\nFTP passwd: $passwd;\n";
+     } else {
+	 $plugin->nagios_die("One of arguments need definition: [-u <user> -p <passwd>] | [-C config.ini]");
      }
 
      my $ftp = Net::FTP->new( $options->host, Debug => $options->debug, Port => $options->port, Timeout => '30', Passive => '0' ) 
