@@ -20,7 +20,7 @@ use DateTime::Format::Epoch::Unix;
 #use Data::Dumper;
 #^^^ Debug only
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use Nagios::Plugin::Getopt;
 use Nagios::Plugin::Threshold;
@@ -66,7 +66,7 @@ sub run {
 
      my $usage = <<'EOT';
 check_ganglia.pl [-H|--host <host>] [-P|--port <port>] [-T|--target <target_host>] [-m|--metric] [--cache <path/to/cache/>] [-t|--timeout] 
-    [--cache-ttl <int>] [-c|--critical] [-w|--warning]
+    [--cachettl <str>] [-c|--critical] [-w|--warning]
     [-h|--help] [-V|--version] [--usage] [--debug] [--verbose]
 EOT
              
@@ -116,9 +116,9 @@ EOT
      );
 
      $options->arg(
-        spec     => 'cache-ttl=s',
-        help     => 'Cache time to live (default: 60 sec)',
-        default  => '60 sec',
+        spec     => 'cachettl=s',
+        help     => 'Cache time to live in sec (default: 60)',
+        default  => '60',
         required => 0,
      );
 
@@ -148,21 +148,19 @@ EOT
      my $parser = new XML::Parser( Style => "Subs" );
 
      my $cache = Cache::File->new( cache_root => $options->cache,
-                                default_expires => $options->cache-ttl);
+                                default_expires => '60 sec');
 
      my $data = $cache->get('ganglia');
 
-     print $data;     
-
      unless ($data) {
-	 print "Cache expire!!! \n";
+	 verbose "Cache expire or no exist. Get new data \n";
 	 $socket = IO::Socket::INET->new(Timeout=>$options->timeout, Proto=>"tcp", PeerAddr=>$options->host, PeerPort=>$options->port)
 	     or $np->nagios_die("Can't get data from host=" . $options->host . " and port=" . $options->port . ": $! \n ");
 	 $data = '';
 	 while ($line = <$socket>) {
 	     $data = $data . $line;
 	 }	 
-	 $cache->set('ganglia', $data, $options->cache-ttl);
+	 $cache->set('ganglia', $data, $options->cachettl . ' sec');
          $socket->close();
      }
 
