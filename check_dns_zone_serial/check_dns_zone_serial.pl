@@ -10,10 +10,9 @@
 use strict;
 use Net::DNS;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use Nagios::Plugin::Getopt;
-use Nagios::Plugin::Threshold;
 use Nagios::Plugin;
 use Data::Validate::Domain;
 use List::Util qw(max min);
@@ -25,16 +24,43 @@ use vars qw(
 
 # the script is declared as a package so that it can be unit tested
 # but it should not be used as a module
-#if ( !caller ) {
+if ( !caller ) {
     run();
-#}
+}
+
+sub verbose {
+
+    # arguments
+    my $message = shift;
+    my $level   = shift;
+
+    if ( !defined $message ) {
+        $plugin->nagios_exit( UNKNOWN,
+            q{Internal error: not enough parameters for 'verbose'} );
+    }
+
+    if ( !defined $level ) {
+        $level = 0;
+    }
+
+    if ( $options->debug() ) {
+        print '[DEBUG] ';
+    }
+
+    if ( $level < $options->verbose() || $options->debug() ) {
+        print $message;
+    }
+
+    return;
+}
+
 
 sub run {
     $plugin = Nagios::Plugin->new( shortname => 'CHECK_DNS_ZONE_SERIAL' );
 
     my $usage = <<'EOT';
-check_dns_zone_serial -z/--zone=zonename
-                      [-h/--help] [--version] [--usage] [--debug]
+check_dns_zone_serial [-z|--zone=zonename] [--ns=ns1,ns2]
+                      [-h/--help] [--version] [--usage] [--debug] [--verbose]
 EOT
 
     $options = Nagios::Plugin::Getopt->new(
@@ -47,6 +73,11 @@ EOT
 	spec     => 'zone|z=s@',
 	help     => 'zone name (e.g. example.com)',
 	required => 1,
+    );
+
+    $options->arg(
+	spec     => 'ns=s',
+	help     => 'specify ns server by comma delimetr (e.g. ns1.domain.com,ns2.domain.com)',
     );
 
     $options->arg(
@@ -68,29 +99,25 @@ EOT
     ############################
     # Nameservers get soa serial
 
-    my $res   = Net::DNS::Resolver->new;
-    my $query = $res->query( @{ $options->zone() }, "NS");
-    my @ns;
-    my %ns_serials;
+    my $res = Net::DNS::Resolver->new;
     my @serials;
-    my $check_s;
 
-    if ($query) {
-       foreach my $rr (grep { $_->type eq 'NS' } $query->answer) {
-           push (@ns, $rr->nsdname);
-	   push (@serials, qrsoa($rr->nsdname,@{ $options->zone() }));
-	   if ( $options->debug() ) {
-	       push @{ $ns_serials{$rr->nsdname} }, qrsoa($rr->nsdname, @{ $options->zone() });
-	   }
-       }
+    if (! $options->ns) {
+	my $query = $res->query( @{ $options->zone() }, "NS")
+	    or $plugin->nagios_die(CRITICAL, "query failed: " . $res->errorstring. "\n");
+	foreach my $rr (grep { $_->type eq 'NS' } $query->answer) {
+	    push (@serials, qrsoa($rr->nsdname,@{ $options->zone() }));
+	    verbose('NS Server: ' . $rr->nsdname . ' have serial: ' . qrsoa($rr->nsdname,@{ $options->zone() }) . "\n");
+	}
     }
     else {
-       $plugin->nagios_exit( CRITICAL, "query failed: ".$res->errorstring."\n");
-    }
-
-    if ( $options->debug() ) {
-	foreach my $key (sort keys %ns_serials) {
-	    print "$key: $ns_serials{$key}[0]\n";
+	foreach my $ns (split(",",$options->ns)) {
+	    if ( ! is_domain( $ns ) ) {
+		$plugin->nagios_exit( UNKNOWN,
+			       'NS name ' . $ns . ' validation fail');
+	    }
+	    push (@serials, qrsoa($ns,@{ $options->zone() }));
+	    verbose('NS Server: ' . $ns . ' have serial: ' . qrsoa($ns,@{ $options->zone() }) . "\n");
 	}
     }
 
