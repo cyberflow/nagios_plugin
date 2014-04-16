@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# check_device_mounted
+# check_ftp
 #
 # This module is free software; you can redistribute it and/or modify it
 # under the terms of GNU general public license (gpl) version 3.
