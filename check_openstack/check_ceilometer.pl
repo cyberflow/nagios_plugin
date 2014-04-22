@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #
-# check_neutron
+# check_ceilometer
 #
 # This module is free software; you can redistribute it and/or modify it
 # under the terms of GNU general public license (gpl) version 3.
@@ -27,7 +27,6 @@ use vars qw(
   $tenant
   $passwd
   $authurl
-  $code
   $message
 );
 
@@ -53,17 +52,19 @@ sub _url {
 
 sub _post {
     my ($url, $data) = @_;    
-    return _agent->post(
+    my $res = _agent->post(
         $url,
         content_type => 'application/json',
         content      => to_json($data),
     );
+    $plugin->nagios_die("WARNING: " . $res->status_line) unless $res->is_success;
+    return $res;
 }
 
 sub _get {
     my ($url, $aurl) = @_;
     my $res = _agent->get($url, 'X-Auth-Token' => get_token($aurl));
-    $plugin->nagios_die("ERROR: " . $res->status_line) unless $res->is_success;
+    $plugin->nagios_die("CRITICAL", "ERROR: " . $res->status_line) unless $res->is_success;
     return $res;
 }
 
@@ -80,10 +81,10 @@ sub get_token {
     return $token;
 }
 
-sub get_agents {
+sub get_meters {
     my ($url, $aurl) = @_;
-    my $res = _get(_url($url, ":9696/v2.0/agents"), $aurl);    
-    return $res->content;
+    my $res = _get(_url($url, ":8777/v2/meters"), $aurl);    
+    return $res;
 }
 
 sub _cache {
@@ -119,7 +120,7 @@ sub verbose {
 }
 
 sub run {
-     $plugin = Nagios::Plugin->new( shortname => 'CHECK_NEUTRON' );
+     $plugin = Nagios::Plugin->new( shortname => 'CHECK_CEILOMETER' );
 
      my $usage = <<'EOT';
 check_device_mounted [-H|--host <HOST|IP>] [-A|--authurl <HOST|IP>] [-u|--user] [-T|--tenant] [-p|--passwd] [-P|--port] [-C|--config <path/to/config>] [--cache <path/to/cache>] [-t|--timeout] 
@@ -129,12 +130,12 @@ EOT
      $options = Nagios::Plugin::Getopt->new(
         usage   => $usage,
         version => $VERSION,
-        blurb   => 'Check neutron server'
+        blurb   => 'Check nova api server'
      );
 
      $options->arg(
         spec     => 'host|H=s',
-        help     => 'API neutron server',
+        help     => 'API nova server',
 	default  => 'localhost',
         required => 1,
      );
@@ -223,23 +224,12 @@ EOT
 	 $plugin->nagios_die("One of arguments need definition: [-u <user> -T <tenant> -p <passwd> -A <authurl>] | [-C config.ini]");
      }
 
-     my @agents = from_json(get_agents($options->host, $authurl))->{'agents'};     
-     my $all_agents = 0;
-     my $alive = 0;
-     foreach my $a ( @{$agents[0]} ) {
-	 if ($a->{'binary'} eq 'neutron-openvswitch-agent') {
-	     $all_agents += 1;
-	     if ($a->{'alive'}) {
-		 $alive += 1;
-	     }
-	 }
-     }
+     #print Dumper(get_meters_code($options->host, $authurl));
+     my $res = get_meters($options->host, $authurl);
 
-     if ($all_agents == 0) {
-	 $plugin->nagios_exit( 'CRITICAL', "Agents were obtained." );
-     } elsif ($alive == 0) {
-	 $plugin->nagios_exit( 'CRITICAL', "All agents are not be alive." );
+     if ($res->code == 200) {
+     	 $plugin->nagios_exit( 'OK', "OK" );
      } else {
-	 $plugin->nagios_exit( 'OK', "OK" );
+     	 $plugin->nagios_exit( 'CRITICAL', $res->status_line );
      }
 }
